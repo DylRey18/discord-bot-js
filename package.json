@@ -18,7 +18,8 @@
   },
   "homepage": "https://github.com/DylRey18/discord-bot-js#readme",
   "dependencies": {
-    "discord.js": "^14.17.3"
+    "discord.js": "^14.17.3",
+    "dotenv": "^16.4.7"
   },
   "devDependencies": {
     "@eslint/js": "^9.18.0",
