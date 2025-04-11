@@ -1,35 +1,24 @@
 // Require the necessary discord.js classes
+const fs = require('node:fs');
+const path = require('node:path');
 const { Client, Collection, Events, GatewayIntentBits } = require('discord.js');
 const { token } = require('./config.json');
-
-// The fs module is Node's native file system module. fs is used to read the commands directory and identify our command files.
-const fs = require('node:fs');
-// path helps construct paths to access files and directories.
-const path = require('node:path');
 
 // Create a new client instance
 const client = new Client({ intents: [GatewayIntentBits.Guilds] });
 
-// Create a new Collection to hold our commands
+// Untuk collection slash command e
 client.commands = new Collection();
 
-// construct the path to the commands directory, basically join the current directory with the commands folder
+// Function loop untuk membaca folder dan file slash command e
 const foldersPath = path.join(__dirname, 'commands');
-
-// function readdirsync returns array of the folder name in the dir, which is utility
 const commandFolders = fs.readdirSync(foldersPath);
 
-// For each folder in the command folder
 for (const folder of commandFolders) {
-	// get the /utility path or whatever folder is in the commands folder
 	const commandsPath = path.join(foldersPath, folder);
-	// => is basically arrow function meaning the param is file, and the function says if it ends with js then return true
 	const commandFiles = fs.readdirSync(commandsPath).filter(file => file.endsWith('.js'));
-	// for each file (js files)
 	for (const file of commandFiles) {
-		// Same thing as before to get the path
 		const filePath = path.join(commandsPath, file);
-		// use require (basically import) to use the function that is exported
 		const command = require(filePath);
 		// Set a new item in the Collection with the key as the command name and the value as the exported module
 		if ('data' in command && 'execute' in command) {
@@ -41,7 +30,6 @@ for (const folder of commandFolders) {
 	}
 }
 
-
 // When the client is ready, run this code (only once).
 // The distinction between `client: Client<boolean>` and `readyClient: Client<true>` is important for TypeScript developers.
 // It makes some properties non-nullable.
@@ -51,3 +39,30 @@ client.once(Events.ClientReady, readyClient => {
 
 // Log in to Discord with your client's token
 client.login(token);
+
+// Listener untuk waktu nerima interaction (i.e: slash command e)
+// Not every interaction is a slash command (e.g. MessageComponent interactions).
+// Make sure to only handle slash commands in this function by making use of the BaseInteraction#isChatInputCommand() method
+client.on(Events.InteractionCreate, async interaction => {
+	if (!interaction.isChatInputCommand()) return;
+
+	const command = interaction.client.commands.get(interaction.commandName);
+
+	if (!command) {
+		console.error(`No command matching ${interaction.commandName} was found.`);
+		return;
+	}
+
+	try {
+		await command.execute(interaction);
+	}
+	catch (error) {
+		console.error(error);
+		if (interaction.replied || interaction.deferred) {
+			await interaction.followUp({ content: 'There was an error while executing this command!', flags: MessageFlags.Ephemeral });
+		}
+		else {
+			await interaction.reply({ content: 'There was an error while executing this command!', flags: MessageFlags.Ephemeral });
+		}
+	}
+});
