@@ -24,7 +24,7 @@ module.exports = {
         try {
             // Create the response with OpenAI API (v4 syntax)
             const response = await openai.chat.completions.create({
-                model: 'gpt-4o', // Use a valid model
+                model: 'gpt-3.5-turbo', // Use a valid model
                 messages: [
                     { role: 'system', content: 'You are a professional code explainer.' },
                     { role: 'user', content: `Explain this code: ${codeSnippet}` },
