@@ -3,6 +3,7 @@ const OpenAI = require('openai');
 const { geminiToken } = require('../../config.json'); // Store your API key securely
 const { GoogleGenAI } = require('@google/genai');
 const fs = require('fs');
+const path = require('path');
 
 // Initialize the Gemini API client
 const genAI = new GoogleGenAI({
@@ -27,6 +28,17 @@ module.exports = {
         const lang = interaction.options.getString('langto');
         await interaction.deferReply(); // Let the bot think
 
+        // Specify the relative path to the 'main/data' folder
+        const targetFolder = path.resolve(__dirname, '../../data'); // Navigate up two levels to `main` and then into `data`
+
+        // Ensure the target folder exists
+        if (!fs.existsSync(targetFolder)) {
+            fs.mkdirSync(targetFolder, { recursive: true }); // Create the folder if it doesn't exist
+        }
+
+        // Define the full path for the output file
+        const filePath = path.join(targetFolder, 'output.txt');
+
         try {
             // Use the Gemini API to generate a response
             
@@ -36,10 +48,11 @@ module.exports = {
             });
 
             const explanation = response.text || 'Could not fetch an explanation.';
-            fs.writeFileSync('output.txt', explanation);
+            // Write the explanation to the file in the specified folder
+            fs.writeFileSync(filePath, explanation);
             await interaction.followUp({
                 content: 'Here’s the explanation attached as a file:',
-                files: ['output.txt']
+                files: [filePath]
             });
         } catch (error) {
             console.error(error);
