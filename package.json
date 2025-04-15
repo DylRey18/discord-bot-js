@@ -19,6 +19,7 @@
   "homepage": "https://github.com/DylRey18/discord-bot-js#readme",
   "dependencies": {
     "@google/genai": "^0.8.0",
+    "axios": "^1.8.4",
     "discord.js": "^14.17.3",
     "dotenv": "^16.5.0",
     "openai": "^4.93.0"
