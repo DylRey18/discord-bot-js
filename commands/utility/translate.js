@@ -2,6 +2,7 @@ const { SlashCommandBuilder } = require('discord.js');
 const OpenAI = require('openai');
 const { geminiToken } = require('../../config.json'); // Store your API key securely
 const { GoogleGenAI } = require('@google/genai');
+const fs = require('fs');
 
 // Initialize the Gemini API client
 const genAI = new GoogleGenAI({
@@ -10,15 +11,20 @@ const genAI = new GoogleGenAI({
 
 module.exports = {
     data: new SlashCommandBuilder()
-        .setName('explaingemini')
+        .setName('translate')
         .setDescription('Explain the given code snippet')
         .addStringOption(option =>
-            option.setName('code')
-                .setDescription('Code that wants to be explained')
+            option.setName('sentence')
+                .setDescription('Sentence to be translated')
+                .setRequired(true))
+        .addStringOption(option =>
+            option.setName('langto')
+                .setDescription('To what language')
                 .setRequired(true)),
     
     async execute(interaction) {
-        const codeSnippet = interaction.options.getString('code');
+        const sentence = interaction.options.getString('sentence');
+        const lang = interaction.options.getString('langto');
         await interaction.deferReply(); // Let the bot think
 
         try {
@@ -26,11 +32,15 @@ module.exports = {
             
             const response = await genAI.models.generateContent({
                 model: 'gemini-2.0-flash', // Use the appropriate model
-                contents: `Explain this code in less than 150 words: ${codeSnippet}`,
+                contents: `Translate this : ${sentence}. Into the language ${lang}`,
             });
 
             const explanation = response.text || 'Could not fetch an explanation.';
-            await interaction.followUp(`Here’s the explanation: \n${explanation}`);
+            fs.writeFileSync('output.txt', explanation);
+            await interaction.followUp({
+                content: 'Here’s the explanation attached as a file:',
+                files: ['output.txt']
+            });
         } catch (error) {
             console.error(error);
             await interaction.followUp('Sorry, an error occurred while trying to explain the code.');
