@@ -15,7 +15,7 @@ module.exports = {
     async execute(interaction) {
         const attachment = interaction.options.getAttachment('image'); // Get the uploaded image
         await interaction.deferReply(); // Let the bot think
-
+        
         try {
             // Validate the uploaded file type
             if (!attachment.contentType.startsWith('image')) {
@@ -23,10 +23,35 @@ module.exports = {
                 return;
             }
 
+            // Download the image temp because Discord attachment is just a URL and not a local image
+            const temp = path.resolve(__dirname, 'temp_input_image.jpg');
+            const writer = fs.createWriteStream(temp);
+            const url = attachment.url;
+
+            // Get the image
+            const getStream = await axios({
+                url,
+                method: 'GET',
+                responseType: 'stream'
+            });
+
+            getStream.data.pipe(writer);
+
+            // Await for the image file to finish downloading
+            await new Promise((resolve, reject) => {
+                writer.on('finish', resolve);
+                writer.on('error', reject);
+            });
+
+           // Read the downloaded image and convert to Base64
+            const imageBase64 = fs.readFileSync(temp, { encoding: 'base64' });
+            console.log(`Base64 content length: ${imageBase64.length}`);
+            console.log(`Base64 snippet: ${imageBase64.substring(0, 100)}...`);
+
             // Send request to Stable Diffusion's API with specified parameters
             const response = await axios.post('http://127.0.0.1:7860/sdapi/v1/img2img', {
                 prompt: "1other, solo, masterpiece, best quality, (anime-style), highly detailed, dynamic pose, expressive facial features, gender-neutral aesthetic, elegant background, vibrant colors, cinematic lighting",
-                negative_prompt: " negativeXL_D",
+                negative_prompt: "negativeXL_D",
                 steps: 30,
                 cfg_scale: 13,
                 sampler_name: "DPM++ 2M SDE",
@@ -35,10 +60,11 @@ module.exports = {
                 width: 1024,
                 height: 1024,
                 denoising_strength: 0.35,
-                
+                init_images: [imageBase64] // Wrap Base64 image in an array for testing
             });
+            console.log('API response:', response.data);
 
-            // Decode the Base64 image
+            // Decode the Base64 image returned from the API
             const base64Image = response.data.images[0];
             const buffer = Buffer.from(base64Image, 'base64');
 
@@ -58,7 +84,8 @@ module.exports = {
                 files: [filePath]
             });
 
-            // Clean up the file after sending
+            // Clean up the temporary file
+            fs.unlinkSync(temp);
             fs.unlinkSync(filePath);
 
         } catch (error) {
